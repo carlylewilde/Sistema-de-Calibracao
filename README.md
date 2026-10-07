@@ -1,74 +1,96 @@
-# Sistema de Gestão de Calibração — v3.2 auditada
+# Sistema de Gestão de Calibração — v3.2 Auditada
 
-Aplicação web local em Python/Flask para gestão de instrumentos, calibrações, resultados metrológicos, certificados, padrões, validação, auditoria, alertas, usuários e backup/restauração.
-
-## O que mudou na v3.2
-
-A v3.2 mantém o layout da v3.1 e acrescenta a assinatura do autor e uma rodada adicional de hardening de segurança.
-
-### Interface e autoria
-
-A interface usa barra superior, menu lateral, dashboard com KPIs, tabelas, formulários, modais e layout responsivo. A marca discreta **“Criado por Carlyle Wilde”** fica no canto inferior direito e aponta para o perfil do autor no GitHub.
-
-### Perfis de acesso
-
-- **ADMINISTRADOR — Nível 1**: contas, parâmetros, backups, inativação e administração completa.
-- **VALIDADOR — Nível 2**: inclui/substitui certificados, revisa e valida; não altera cadastros mestres nem executa exclusões administrativas.
-- **CONSULTA — Nível 3**: somente leitura, dashboard, pesquisa e download de documentos.
-- **TÉCNICO / OPERADOR**: inclusão e atualização sem validação final.
-- **GESTOR**: consulta gerencial e auditoria.
-
-A aplicação não possui rota para exclusão física de certificados. Substituições criam nova revisão e preservam a anterior.
-
-### Segurança
-
-A v3.2 inclui CSRF no login e nas operações de escrita, revogação de sessão após eventos críticos, RBAC no backend, headers de segurança, cache `no-store`, validação de assinatura em uploads, nomes aleatórios de armazenamento, SHA-256, proteção de restauração contra path traversal/symlink/ZIP bomb, e proteção contra remoção do último administrador ativo.
-
-Flask e Waitress estão fixados nesta entrega em **Flask 3.1.3** e **Waitress 3.0.2**.
+Sistema web local em Python/Flask para gestão de instrumentos, calibrações, certificados, padrões, validação, auditoria, alertas, contas de usuário e backup/restauração.
 
 ## Instalação
 
+O repositório usa um instalador autocontido que recria toda a estrutura do projeto, incluindo backend, banco, templates, CSS, JavaScript e testes.
+
 ```bash
+python Sistema_Calibracao_v3_2_INSTALADOR.py
+cd Sistema_Calibracao_v3_2
 python -m pip install -r requirements.txt
 python self_test.py
 python security_audit.py
 python run_server.py
 ```
 
-Na primeira execução o sistema cria o usuário `admin` com senha aleatória e grava temporariamente `INITIAL_ADMIN_CREDENTIALS.txt`. Troque a senha no primeiro acesso.
-
-## Acesso
-
-Local:
+Acesso local:
 
 ```text
 http://localhost:8080
 ```
 
-Para rede corporativa, use firewall/segmentação e HTTPS por reverse proxy. Quando estiver atrás de HTTPS:
+Na primeira execução é criado o usuário `admin` com senha aleatória em `INITIAL_ADMIN_CREDENTIALS.txt`. A troca é obrigatória no primeiro acesso.
 
-```powershell
-$env:CALIB_COOKIE_SECURE='1'
+## Interface
+
+A v3.2 mantém o layout corporativo da v3.1:
+
+- barra superior azul-marinho;
+- menu lateral;
+- cards de KPI;
+- conformidade e próximos vencimentos;
+- tabelas, formulários e modais padronizados;
+- interface responsiva;
+- marca discreta **“Criado por Carlyle Wilde”** no canto inferior direito, com link para [github.com/carlylewilde](https://github.com/carlylewilde).
+
+## Perfis de acesso
+
+- **Administrador — Nível 1:** contas, parâmetros, backup/restauração, inativação e administração.
+- **Validador — Nível 2:** certificados e validação, sem exclusões administrativas nem alteração de cadastros mestres.
+- **Consulta — Nível 3:** somente leitura e download.
+- **Técnico/Operador:** cadastro e atualização sem aprovação final.
+- **Gestor:** consulta gerencial e auditoria.
+
+As permissões são verificadas no backend; esconder botões não é usado como controle de segurança.
+
+## Cybersecurity
+
+A v3.2 inclui:
+
+- autenticação obrigatória e RBAC;
+- CSRF, inclusive no login;
+- cookies HttpOnly/SameSite e expiração;
+- revogação de sessões após troca/reset de senha e mudança de perfil/status;
+- bloqueio por tentativas repetidas;
+- PBKDF2-HMAC-SHA256 com salt;
+- proteção contra remoção do último administrador;
+- headers de segurança HTTP;
+- validação de uploads por extensão e assinatura binária;
+- nomes aleatórios e SHA-256 para documentos;
+- preservação de revisões de certificados;
+- proteção contra path traversal e ataques comuns em ZIP de restauração;
+- backup consistente do SQLite com `integrity_check`;
+- GitHub Actions com testes e `pip-audit`;
+- Dependabot semanal.
+
+Resultado da revisão local:
+
+```text
+40/40 testes automatizados: OK
+20/20 controles da auditoria estática: OK
 ```
 
-## Regras metrológicas
+Veja [AUDITORIA_CYBERSECURITY_v3_2.md](AUDITORIA_CYBERSECURITY_v3_2.md) e [SECURITY.md](SECURITY.md).
 
-- Erro = Valor indicado − Valor de referência
-- Correção = −Erro
-- Se `U` não for informada e existirem `u` e `k`: `U = |u × k|`
-- `NONE`: não declara conformidade
-- `LIMITS_INDICATION`: indicação dentro dos limites cadastrados
-- `ABS_ERROR_TOL`: `|Erro| <= Tolerância`
-- `GUARD_BAND_U`: `|Erro| + U <= Tolerância`
+## Implantação em rede
 
-Nenhuma regra é presumida universal. O procedimento da organização define a regra aplicável.
+Para uso corporativo, coloque o Waitress atrás de HTTPS/reverse proxy e configure:
 
-## Testes
+```powershell
+$env:CALIB_HOST='0.0.0.0'
+$env:CALIB_COOKIE_SECURE='1'
+python run_server.py
+```
 
-A entrega foi validada com **40 testes automatizados** e **20 verificações estáticas de segurança**. O relatório está em `AUDITORIA_CYBERSECURITY_v3_2.md`.
+A pasta da aplicação, banco e certificados também deve ser protegida por ACLs do Windows/Linux. RBAC controla a aplicação; não substitui permissões do sistema operacional.
 
-## Segurança operacional
+## Dependências
 
-RBAC controla o que cada usuário pode fazer pela aplicação. Para impedir alteração direta do código, banco e arquivos, a pasta do sistema também precisa de ACL adequada no Windows/Linux e deve ser executada por uma conta técnica.
+- Flask 3.1.3
+- Waitress 3.0.2
 
-Autor: [Carlyle Wilde](https://github.com/carlylewilde)
+## Autor
+
+**Carlyle Wilde** — [GitHub](https://github.com/carlylewilde)
