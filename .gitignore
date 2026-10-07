@@ -1,0 +1,23 @@
+# Dados e segredos locais
+database/*.db
+database/*.db-*
+database/.secret_key
+INITIAL_ADMIN_CREDENTIALS.txt
+uploads/
+backups/
+exports/
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+
+# IDE / sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
